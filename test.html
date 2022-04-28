@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+    <title>FreightWise Programming Test</title>
+
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script>
+      "use strict";
+
+      /**
+       * Software Developer test.
+       *
+       * Doing research and making API calls are an important part of what we do at FreightWise.  This test will
+       * demonstrate your abilities to:
+       *
+       * - Make an API call
+       * - Research an API
+       * - Do basic DOM manipulation
+       * - Parse data
+       * - Handle errors
+       * - Be creative
+       *
+       * Feel free to ask any questions you may have.  Use a lot of comments, and explain why you are doing things.
+       * Don't spend more than 1-2 hours on it - we aren't expecting a finished product, but it should work and look
+       * nice.  Feel free to use any third party libraries, and if you do so, explain why you used them instead of
+       * built in browser APIs.
+       *
+       * Instructions:
+       * - Use the axios (https://github.com/axios/axios) request library to make an API call to the OpenWeatherMap
+       *   API for Current Weather Data using this API key:  25e989bd41e3e24ce13173d8126e0fd6
+       *   We've already imported this library to get you started.
+       * - Use either async/await or Promises.
+       * - Get the weather for Brentwood, TN, and write it to the DOM using the `setResults` method below.  Be
+       *   creative and make it look nice.
+       * - Handle errors and use the `setError` method below to display the error.  Also make it look nice.
+       * - If you find any mistakes in the test, fix them, and leave a comment about what you fixed and why.
+       * - Make sure your code is readable and maintainable.
+       * - Use plenty of descriptive comments.
+       * - Make sure your code runs in the latest version of Google Chrome and Firefox (ES6 is allowed).
+       * - Make your code live (GitHub with GitHub pages works nice).
+       * - Send a link to your finished test to dev-team-jobs@freightwisellc.com.
+       *
+       * Feel free to add your own twist to it (completely optional).  Here are a few ideas:
+       * - Sign up for NewsAPI.org and get the Top Headlines and show them along with the weather.
+       * - Use the browser location API to get the user's current location, and show that location's weather.
+       * - Show a satellite map of the weather in Brentwood.
+       * - Request a user's phone number and send them an SMS with the weather.
+       */
+      class Test {
+        /*
+            Here I'm initializing the constant field such as the APIKey. Ideally, I want to make them readonly/const but unable to do it since the source is HTML file.
+            Although we can hardcode the API key in the URL itself, I prefer to keep it separate in a service file/folder to allow us to reuse the key elsewhere.
+            If it's only needed in one file/class, we can make it a private property.
+            */
+
+        _APIKey = "25e989bd41e3e24ce13173d8126e0fd6";
+
+        constructor() {
+          //In order to select a specific element, we need to use its corresponding index.
+          //Since we have only one element with class 'test-results', we will use the index 0.
+
+          this.testResults = document.getElementsByClassName("test-results")[0];
+        }
+
+        async getWeather(latitude, longitude) {
+          try {
+            //I'm a fan of template literals. It provides a neat way to combine string literal with variables. Hence, I'm using it here to easily consume the latitude, longitude and APIKey's value
+            const response = await axios.get(
+              `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&units=imperial&appid=${this._APIKey}`
+            );
+
+            //Making sure that the request was successful
+            if (response.hasOwnProperty("status")) {
+              if (response.status == "200") {
+                this.setResults(response.data);
+              } else {
+                if (
+                  parseInt(response.status) >= 300 &&
+                  parseInt(response.status) <= 599
+                ) {
+                  //Status code 300-399 -> Redirection
+                  //Status code 400-499 -> Client Error
+                  //Status code 500-599 -> Server Error
+
+                  //We can send an email to the developers to inform about redirection, client error and server errors.
+
+                  if (
+                    parseInt(response.status) >= 400 &&
+                    parseInt(response.status) <= 599
+                  ) {
+                    this.setError(
+                      "Uh oh!! Unable to fetch the weather data currently. Please try again after a while."
+                    );
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            this.setError(
+              "Uh oh!! Unable to fetch the weather data currently. Please try again after a while."
+            );
+            console.error(error);
+          }
+        }
+
+        async run() {
+          console.log(new Date().toISOString(), "[Test]", "Running the test");
+          //Passing the co-ordinates for Brentwood, TN
+          this.getWeather(36.0331, -86.7828);
+        }
+
+        setError(message) {
+          //Hiding the result content element
+          let resultContent = document.getElementById("content");
+          resultContent.classList.add("hide");
+
+          //Showing the error content element
+          let errorContent = document.getElementById("error");
+          errorContent.classList.remove("hide");
+
+          let errorMessage = document.getElementById("errorMessage");
+          errorMessage.textContent = message;
+        }
+
+        setResults(results) {
+          //Hiding the error content element
+          let errorContent = document.getElementById("error");
+          errorContent.classList.add("hide");
+
+          //Displaying the result content
+          let resultContent = document.getElementById("content");
+          resultContent.classList.remove("hide");
+
+          //Changes to convert UNIX timestamp to local time
+          let sunrise = this.formatTime(new Date(results.sys.sunrise * 1000));
+          let sunset = this.formatTime(new Date(results.sys.sunset * 1000));
+
+          /*
+            Not a big fan of creating HTML elements in Javascript as it looks cumbersome and complicated. 
+            Hence, the basic elements have been created in the HTML itself. 
+            Here, we are storing the ids of HTML elements as a key and the corresponding data as value in the dictionary.
+            We are looping through each element and populating the data.
+          */
+          const info = [
+            { key: "cityName", value: "Brentwood, TN" },
+            { key: "latitude", value: results.coord.lat },
+            { key: "longitude", value: results.coord.lon },
+            { key: "weatherType", value: results.weather[0]["main"] }, // Since we are usually going to have one element in the main sub object, I'm referring it directly
+            {
+              key: "weatherDescription",
+              value: results.weather[0]["description"],
+            },
+
+            { key: "currentTemperature", value: results.main.temp },
+            { key: "feelsLike", value: results.main.feels_like },
+            { key: "minTemperature", value: results.main.temp_min },
+            { key: "maxTemperature", value: results.main.temp_max },
+
+            { key: "windSpeed", value: results.wind.speed },
+            { key: "humidity", value: results.main.humidity },
+
+            { key: "sunrise", value: sunrise },
+            { key: "sunset", value: sunset },
+          ];
+
+          for (const data in info) {
+            document.getElementById(info[data].key).textContent =
+              info[data].value;
+          }
+        }
+
+        //Function to display the time in user readable format
+        formatTime(date) {
+          let hours = date.getHours();
+          let minutes = date.getMinutes();
+          let ampm = hours >= 12 ? "PM" : "AM";
+
+          return `${hours}:${minutes} ${ampm}`;
+        }
+      }
+    </script>
+
+    <style>
+      .button-container {
+        text-align: center;
+      }
+
+      .button-container > button {
+        margin: 0;
+        padding: 10px 18px;
+        color: white;
+        background-color: #008000;
+        border: none;
+        border-radius: 3px;
+        transition: all 200ms ease-in-out;
+        font-size: 14px;
+      }
+
+      .button-container > button:hover {
+        background-color: #00a000;
+      }
+
+      .button-container > button:active {
+        background-color: #006000;
+      }
+
+      .text-success {
+        color: #008000;
+      }
+
+      .text-danger {
+        color: red;
+      }
+
+      .main {
+        border: 4px solid #969696;
+        background: #d9dbda;
+        margin: 130px;
+        font-size: large;
+      }
+
+      .error-main {
+        border: 14px solid #969696;
+        background: darksalmon;
+        margin: 280px;
+        font-size: large;
+        border-block-color: darksalmon;
+        text-align: center;
+      }
+
+      .hide {
+        display: none !important;
+      }
+
+      #weatherDescription,
+      #weatherType {
+        font-style: oblique;
+        font-size: x-large;
+      }
+
+      #weatherDescription {
+        margin-left: 40px;
+      }
+
+      .grid-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-gap: 20px;
+      }
+
+      .grid-child {
+        margin-left: 12px;
+      }
+
+      #currentWeather {
+        text-align: end;
+        margin-right: 14px;
+      }
+
+      .drift {
+        margin-right: 29px;
+      }
+
+      #currentTemperature {
+        font-size: 24px;
+      }
+    </style>
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta2/css/all.min.css"
+      integrity="sha512-YWzhKL2whUzgiheMoBFwW8CKV4qpHQAEuvilg9FAn5VJUDwKZZxkJNuGM4XkWuk94WCrrwslk8yWNGmY1EduTA=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+  </head>
+
+  <body>
+    <div class="test-results">
+      <!--Creating the below HTML elements to help with displaying the weather data -->
+      <div class="button-container"></div>
+
+      <div id="content" class="main grid-container hide">
+        <div class="grid-child">
+          <h2 id="cityName"></h2>
+          <h4 id="co-ordinates">
+            latitude: <span id="latitude" class="drift"></span> longitude:
+            <span id="longitude"></span>
+          </h4>
+          <h5>
+            <i class="fas fa-solid fa-cloud"></i>
+            <span id="weatherType"></span>
+            <span id="weatherDescription" class="weather"></span>
+          </h5>
+        </div>
+
+        <div id="currentWeather" class="grid-child">
+          <h2>
+            Current Temperature:
+            <span id="currentTemperature"></span>
+            <span>&#176;</span>
+            F
+          </h2>
+          <h4>
+            <i class="fas fa-solid fa-temperature-half"></i> feelsLike:
+            <span id="feelsLike"></span>
+            <span>&#176;</span>
+            F
+          </h4>
+          <h5>
+            Min:
+            <span id="minTemperature" class="text-success" class="drift"></span>
+            <span>&#176;</span> F, Max:
+            <span id="maxTemperature" class="text-danger"></span>
+            <span>&#176;</span> F
+          </h5>
+        </div>
+
+        <div class="grid-child">
+          <div id="otherStatistics">
+            <h2 id="currentTemperature"></h2>
+            <h4>
+              <span class="drift">Wind: <span id="windSpeed"> </span> mph</span>
+              Humidity <i class="fas fa-solid fa-droplet"></i>(%):
+              <span id="humidity"></span>
+            </h4>
+          </div>
+
+          <div id="sunInfo">
+            <h4>
+              <i class="fas fa-sun"></i> Sunrise: <span id="sunrise"></span
+              ><br />
+              <i class="fa-solid fa-cloud-sun"></i> Sunset:
+              <span id="sunset"></span>
+            </h4>
+          </div>
+        </div>
+      </div>
+
+      <div id="error" class="error-main hide">
+        <i class="fa fa-solid fa-circle-exclamation"></i>
+        <span id="errorMessage"></span>
+      </div>
+    </div>
+
+    <script>
+      "use strict";
+
+      /**
+       * Creates a button for kicking off the test and adds it to the DOM.
+       *
+       * @param {HTMLElement} context  the parent element to add the button to
+       * @param {Test}        test     the test to be executed
+       * @returns {HTMLElement} the button added to the test
+       */
+      function addButtonForTest(context, test) {
+        let testButton = document.createElement("button");
+
+        testButton.type = "button";
+        testButton.innerText = "Get the Brentwood Weather";
+        testButton.onclick = () => test.run();
+
+        context.appendChild(testButton);
+
+        return testButton;
+      }
+
+      // Create the Test and add a button to the UI for running the test
+      const test = new Test();
+      const buttonContainer =
+        document.getElementsByClassName("button-container")[0];
+
+      addButtonForTest(buttonContainer, test);
+    </script>
+  </body>
+</html>
